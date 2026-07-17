@@ -6,7 +6,7 @@
     { id: 2, text: "Izquierda medio",  weight: 1 },
     { id: 3, text: "Izquierda abajo",  weight: 1 },
     { id: 4, text: "Centro arriba",    weight: 1 },
-    { id: 5, text: "Centro",           weight: 1 },
+    { id: 5, text: "Centro medio",     weight: 1 },
     { id: 6, text: "Centro abajo",     weight: 1 },
     { id: 7, text: "Centro picar",     weight: 1 },
     { id: 8, text: "Derecha arriba",   weight: 1 },
