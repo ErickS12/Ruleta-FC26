@@ -4,8 +4,10 @@
   --panel: #241A3D;
   --panel-line: #382A57;
   --gold: #F4B740;
+  --black: #0B0A0D;
   --gold-dim: #C99530;
   --coral: #E94F4F;
+  --blue: #5FA8E0;
   --teal: #3FBFAD;
   --cream: #F6EFE3;
   --cream-dim: #C9C0AF;
@@ -410,7 +412,7 @@ input:focus, button:focus{
   height: 22px;
   border-radius: 50%;
   background: var(--bg-deep);
-  color: var(--gold);
+  color: var(--cream);
   font-size: 11px;
   font-weight: 700;
   display:flex;
@@ -421,7 +423,8 @@ input:focus, button:focus{
   font-weight: 700;
   word-break: break-word;
 }
-.results-list li.first .rnum{ background: var(--coral); }
+.results-list li:nth-child(odd) .rnum{ background: var(--coral); }
+.results-list li:nth-child(even) .rnum{ background: var(--blue); }
 
 .results-summary{
   font-size: 11px;
