@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>La Ruleta — Ruleta de Probabilidades</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <div class="marquee-top" aria-hidden="true">
+    <div class="bulb" style="animation-delay:0s"></div>
+    <div class="bulb" style="animation-delay:.2s"></div>
+    <div class="bulb" style="animation-delay:.4s"></div>
+    <div class="bulb" style="animation-delay:.6s"></div>
+    <div class="bulb" style="animation-delay:.8s"></div>
+  </div>
+
+  <header>
+    <h1>Ruleta para penales FC26</h1>
+    <p>Ruleta de probabilidades para tirar penales en FC26</p>
+  </header>
+
+  <main>
+    <section class="wheel-col">
+      <div class="wheel-stage">
+        <div class="bulb-ring" id="bulbRing" aria-hidden="true"></div>
+        <div class="pointer" aria-hidden="true"></div>
+        <div class="wheel-rotator" id="wheelRotator">
+          <!-- labels injected by JS, background set by JS -->
+          <div class="hub" id="hubBtn" role="button" tabindex="0" aria-label="Girar la ruleta">GIRAR</div>
+        </div>
+      </div>
+      <p class="status-line" id="statusLine" aria-live="polite">Agrega al menos 2 opciones para girar.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Opciones</h2>
+      <div id="optList"></div>
+
+      <div class="panel-actions">
+        <button class="btn btn-add" id="addBtn" type="button">+ Agregar opción</button>
+        <button class="btn btn-eq" id="eqBtn" type="button">Igualar pesos</button>
+      </div>
+
+      <button class="btn btn-spin" id="spinBtn" type="button">Girar la ruleta</button>
+
+      <p class="hint">El "peso" controla qué tan probable es cada opción: una opción con peso 2 tiene el doble de probabilidad que una con peso 1. El % se calcula solo.</p>
+    </section>
+  </main>
+
+  <div class="overlay" id="overlay">
+    <div class="ticket">
+      <p class="eyebrow">15 resultados</p>
+      <ol class="results-list" id="resultsList"></ol>
+      <p class="results-summary" id="resultsSummary"></p>
+      <div class="ticket-actions">
+        <button class="btn btn-close" id="closeBtn" type="button">Cerrar</button>
+        <button class="btn btn-again" id="againBtn" type="button">Girar de nuevo</button>
+      </div>
+    </div>
+  </div>
+
+<script src="script.js"></script>
+</body>
+</html>
