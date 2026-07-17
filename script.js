@@ -14,7 +14,7 @@
     { id: 10, text: "Derecha abajo",   weight: 1 }
     
   ];
-  let nextId = 5;
+  let nextId = 11;
   let totalRotation = 0;
   let spinning = false;
 
