@@ -234,6 +234,17 @@ main{
   align-items:center;
   margin-bottom:10px;
 }
+.opt-name{
+  flex: 1 1 auto;
+  min-width: 0;
+  background: var(--bg-deep);
+  border: 1px solid var(--panel-line);
+  color: var(--cream);
+  padding: 9px 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
 .opt-swatch{
   width:12px; height:12px;
   border-radius:50%;

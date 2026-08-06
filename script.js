@@ -3,18 +3,13 @@
 
   let options = [
     { id: 1, text: "Izquierda arriba", weight: 1 },
-    { id: 2, text: "Izquierda medio",  weight: 1 },
-    { id: 3, text: "Izquierda abajo",  weight: 1 },
-    { id: 4, text: "Centro arriba",    weight: 1 },
-    { id: 5, text: "Centro medio",     weight: 1 },
-    { id: 6, text: "Centro abajo",     weight: 1 },
-    { id: 7, text: "Centro picar",     weight: 1 },
-    { id: 8, text: "Derecha arriba",   weight: 1 },
-    { id: 9, text: "Derecha medio",    weight: 1 },
-    { id: 10, text: "Derecha abajo",   weight: 1 }
-    
+    { id: 2, text: "Izquierda abajo",  weight: 1 },
+    { id: 3, text: "Centro arriba",    weight: 1 },
+    { id: 4, text: "Centro abajo",     weight: 1 },
+    { id: 5, text: "Derecha arriba",   weight: 1 },
+    { id: 6, text: "Derecha abajo",    weight: 1 }
   ];
-  let nextId = 11;
+  let nextId = 7;
   let totalRotation = 0;
   let spinning = false;
 
@@ -31,6 +26,20 @@
   const closeBtn  = document.getElementById('closeBtn');
   const againBtn  = document.getElementById('againBtn');
   const bulbRing  = document.getElementById('bulbRing');
+
+  // Usamos un origen de aleatoriedad fuerte si el navegador lo soporta.
+  function randomFloat(){
+    if (typeof crypto !== 'undefined' && crypto.getRandomValues){
+      const arr = new Uint32Array(1);
+      crypto.getRandomValues(arr);
+      return arr[0] / 4294967296;
+    }
+    return Math.random();
+  }
+
+  function clamp(x, min, max){
+    return Math.max(min, Math.min(max, x));
+  }
 
   function totalWeight(){
     return options.reduce((s,o)=> s + (Number(o.weight)>0? Number(o.weight):0), 0);
@@ -99,6 +108,7 @@
 
       optList.appendChild(row);
     });
+
     updateSpinAvailability();
   }
 
@@ -186,7 +196,7 @@
     // uniform random point on the circle; the segment containing it wins,
     // so probability of winning equals segment size (weight share).
     const tw = totalWeight();
-    const r = Math.random() * tw;
+    const r = randomFloat() * tw;
     let cum = 0;
     let winner = options[0];
     let start = 0, end = 0;
@@ -204,13 +214,36 @@
     }
     // random point within the segment (avoid extreme edges)
     const margin = Math.min((end - start) * 0.15, 4);
-    const angle = start + margin + Math.random() * Math.max((end - start) - margin * 2, 0.001);
+    const angle = start + margin + randomFloat() * Math.max((end - start) - margin * 2, 0.001);
     return { winner, angle, pct: ((end-start)/360*100) };
+  }
+
+  function pickAngleForOption(targetOption){
+    const tw = totalWeight();
+    if (tw <= 0 || !targetOption){
+      return 0;
+    }
+
+    let cum = 0;
+    for (const o of options){
+      const w = Number(o.weight) > 0 ? Number(o.weight) : 0;
+      const segStart = cum;
+      const segEnd = cum + w;
+      if (o.id === targetOption.id){
+        const start = (segStart / tw) * 360;
+        const end = (segEnd / tw) * 360;
+        const margin = Math.min((end - start) * 0.15, 4);
+        return start + margin + randomFloat() * Math.max((end - start) - margin * 2, 0.001);
+      }
+      cum = segEnd;
+    }
+
+    return pickWinnerAngle().angle;
   }
 
   function pickWeightedOption(){
     const tw = totalWeight();
-    const r = Math.random() * tw;
+    const r = randomFloat() * tw;
     let cum = 0;
     for (const o of options){
       const w = Number(o.weight) > 0 ? Number(o.weight) : 0;
@@ -220,7 +253,118 @@
     return options[options.length - 1];
   }
 
-  const RESULT_COUNT = 15;
+  const RESULT_COUNT = 20;
+
+  // Pseudoaleatoriedad inteligente para secuencias de penales.
+  // Combina: enfriamiento por recencia, compensación de balance global,
+  // bonus por ausencia y penalización de transiciones/patrones repetitivos.
+  function generateSmartPenaltySequence(count){
+    const currentOptions = options.slice();
+    const n = currentOptions.length;
+    const totalBaseWeight = currentOptions.reduce((s, o) => s + Math.max(1, Number(o.weight) || 1), 0);
+    const targetShare = currentOptions.map(o => Math.max(1, Number(o.weight) || 1) / totalBaseWeight);
+    const meanShare = 1 / n;
+    const used = Array(n).fill(0);
+    const lastSeen = Array(n).fill(-999);
+    const fromTo = Array.from({ length: n }, () => Array(n).fill(0));
+    const picks = [];
+
+    for (let t = 0; t < count; t++){
+      const weights = [];
+
+      let lastA = -1;
+      let lastB = -1;
+      if (picks.length >= 1) lastA = picks[picks.length - 1];
+      if (picks.length >= 2) lastB = picks[picks.length - 2];
+
+      for (let i = 0; i < n; i++){
+        // Regla dura: nunca más de 2 iguales seguidas.
+        if (picks.length >= 2 && lastA === i && lastB === i){
+          weights.push(0);
+          continue;
+        }
+
+        const distance = t - lastSeen[i];
+
+        // Enfriamiento: recién usada => menos probabilidad temporal.
+        let cooldown = 1;
+        if (distance <= 1) cooldown = 0.32;
+        else if (distance === 2) cooldown = 0.58;
+        else if (distance === 3) cooldown = 0.82;
+
+        // Bonus de ausencia: sube gradualmente si no sale hace tiempo.
+        const absenceBonus = 1 + 0.08 * clamp(distance - 1, 0, 9);
+
+        // Balance global: compensa opciones infra/sobre-representadas
+        // respecto a su cuota objetivo según peso.
+        const expected = t * targetShare[i];
+        const deficit = expected - used[i];
+        const balance = clamp(Math.exp(0.42 * deficit), 0.55, 1.95);
+
+        // Peso base relativo de cada opción (preferencia del usuario).
+        const base = clamp(targetShare[i] / meanShare, 0.35, 2.5);
+
+        // Penaliza repetir de forma excesiva la misma transición A->B.
+        let transitionPenalty = 1;
+        if (lastA !== -1){
+          const row = fromTo[lastA];
+          const rowTotal = row.reduce((s, v) => s + v, 0);
+          const rowMean = rowTotal > 0 ? rowTotal / n : 0;
+          const thisEdge = row[i];
+          if (thisEdge > rowMean){
+            transitionPenalty = 1 / (1 + 0.35 * (thisEdge - rowMean));
+          }
+        }
+
+        // Anti-patrones: reduce ciclos cortos como ABAB o ABCABC.
+        let patternPenalty = 1;
+        if (picks.length >= 3){
+          const p0 = picks[picks.length - 1];
+          const p1 = picks[picks.length - 2];
+          const p2 = picks[picks.length - 3];
+          if (i === p1 && p0 === p2){
+            patternPenalty *= 0.52; // tendencia a ABAB
+          }
+        }
+        if (picks.length >= 5){
+          const a = picks[picks.length - 5];
+          const b = picks[picks.length - 4];
+          const c = picks[picks.length - 3];
+          const d = picks[picks.length - 2];
+          const e = picks[picks.length - 1];
+          if (d === a && e === b && i === c){
+            patternPenalty *= 0.58; // tendencia a ABCABC
+          }
+        }
+
+        // Pequeño ruido para evitar fronteras deterministas.
+        const jitter = 0.92 + randomFloat() * 0.16;
+
+        const w = base * cooldown * absenceBonus * balance * transitionPenalty * patternPenalty * jitter;
+        weights.push(Math.max(0.00001, w));
+      }
+
+      const sumW = weights.reduce((s, v) => s + v, 0);
+      let r = randomFloat() * sumW;
+      let selected = 0;
+      for (let i = 0; i < n; i++){
+        r -= weights[i];
+        if (r <= 0){
+          selected = i;
+          break;
+        }
+      }
+
+      picks.push(selected);
+      used[selected] += 1;
+      if (lastA !== -1){
+        fromTo[lastA][selected] += 1;
+      }
+      lastSeen[selected] = t;
+    }
+
+    return picks.map(i => currentOptions[i]);
+  }
 
   function spin(){
     if (spinning) return;
@@ -232,21 +376,16 @@
     updateSpinAvailability();
     statusLine.textContent = 'Girando…';
 
-    const { winner, angle } = pickWinnerAngle();
+    const results = generateSmartPenaltySequence(RESULT_COUNT);
+    const winner = results[0];
+    const angle = pickAngleForOption(winner);
     const targetEffective = (360 - angle) % 360;
     const currentEffective = ((totalRotation % 360) + 360) % 360;
     let delta = (targetEffective - currentEffective + 360) % 360;
-    const extraSpins = 5 + Math.floor(Math.random() * 3); // 5-7 full turns
+    const extraSpins = 5 + Math.floor(randomFloat() * 3); // 5-7 full turns
     totalRotation += delta + extraSpins * 360;
 
     wheelRot.style.transform = 'rotate(' + totalRotation + 'deg)';
-
-    // El resultado que marca el puntero es el primero de la lista;
-    // los otros 14 se generan con la misma probabilidad ponderada.
-    const results = [winner];
-    for (let i = 1; i < RESULT_COUNT; i++){
-      results.push(pickWeightedOption());
-    }
 
     const onEnd = (e) => {
       if (e.propertyName !== 'transform') return;
